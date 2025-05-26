@@ -17,8 +17,8 @@ I have attached my résumé for your review and would welcome the opportunity to
 
 Best regards,  
 Vratika Jodhani  
-📍 Mumbai | 📧 vratikajodhani@gmail.com | 📞 +91 98878 38722  
-🔗 https://www.linkedin.com/in/vratika-jodhani-4678661ab
+Mumbai | 📧 vratikajodhani@gmail.com | +91 98878 38722  
+https://www.linkedin.com/in/vratika-jodhani-4678661ab
 """
 
 # ----------  H E L P E R S  ----------
