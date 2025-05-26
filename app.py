@@ -1,10 +1,7 @@
 import streamlit as st
 from fpdf import FPDF
 from io import BytesIO
-import spacy
-
-# Load spaCy model
-nlp = spacy.load("en_core_web_sm")
+import re
 
 # --- TEMPLATE ---
 template = """
@@ -24,29 +21,35 @@ Vratika Jodhani
 🔗 https://www.linkedin.com/in/vratika-jodhani-4678661ab
 """
 
-# --- NLP Job Parsing ---
-def extract_job_info(description):
-    doc = nlp(description)
-
+# --- Basic Extraction Logic ---
+def extract_info(description):
     job_title = ""
     company_name = ""
     keywords = []
 
-    for ent in doc.ents:
-        if ent.label_ == "ORG" and not company_name:
-            company_name = ent.text
+    lines = description.splitlines()
 
-    # Heuristic: look for likely title from lines
-    for line in description.splitlines():
-        if "job title" in line.lower() or "role" in line.lower():
+    for line in lines:
+        if not job_title and re.search(r'(?i)(job title|role)', line):
             job_title = line.split(":")[-1].strip()
-        elif not job_title and line.istitle() and len(line.split()) <= 6:
-            job_title = line.strip()
+        if not company_name and re.search(r'(?i)company name|at\s', line):
+            match = re.search(r'at\s([A-Za-z &]+)', line)
+            if match:
+                company_name = match.group(1).strip()
+        # Keyword heuristics (long phrases)
+        if len(line.split()) > 5 and len(keywords) < 3:
+            keywords.append(line.strip())
 
-    keywords = [chunk.text for chunk in doc.noun_chunks][:5]
+    if not job_title:
+        job_title = "Actuarial Analyst"
+    if not company_name:
+        company_name = "Your Company"
+    if not keywords:
+        keywords = ["innovative actuarial services"]
+
     return job_title, company_name, ", ".join(keywords)
 
-# --- PDF Generation ---
+# --- PDF Generator ---
 def create_pdf(content):
     pdf = FPDF()
     pdf.add_page()
@@ -62,18 +65,18 @@ def create_pdf(content):
 st.set_page_config(page_title="Cover Letter Generator", layout="centered")
 st.title("📄 Cover Letter Generator (Vratika Jodhani)")
 
-# Step 1: Job Description Parsing
+# Paste job description
 st.subheader("🔍 Paste Job Description (Optional)")
-job_desc = st.text_area("Paste the full job description from LinkedIn (or other sources):")
+job_desc = st.text_area("Paste job description here (from LinkedIn or other source):")
 
 if st.button("Auto-Fill from Description") and job_desc.strip():
-    job_title, company_name, company_value = extract_job_info(job_desc)
+    job_title, company_name, company_value = extract_info(job_desc)
     st.session_state["job_title"] = job_title
     st.session_state["company_name"] = company_name
     st.session_state["company_value"] = company_value
-    st.success("Fields below have been pre-filled based on the job description.")
+    st.success("Fields auto-filled below. You can edit them if needed.")
 
-# Step 2: Manual or Auto-Filled Inputs
+# Input Fields
 st.subheader("✏️ Fill in Cover Letter Details")
 
 hiring_manager = st.text_input("Hiring Manager's Name or 'Recruitment Team'", "Recruitment Team")
@@ -82,7 +85,7 @@ company_name = st.text_input("Company Name", st.session_state.get("company_name"
 platform = st.text_input("Platform/Source (e.g., LinkedIn)", "LinkedIn")
 company_value = st.text_area("Company Initiative/Value", st.session_state.get("company_value", ""))
 
-# Step 3: Generate Cover Letter
+# Generate Cover Letter
 if st.button("Generate Cover Letter"):
     letter = template.format(
         hiring_manager=hiring_manager,
